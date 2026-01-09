@@ -2,6 +2,7 @@ html,
 body {
   height: 100%;
   text-align: center;
+  background-color: black;
 }
 
 .login {
@@ -29,5 +30,24 @@ img {
 }
 
 .images {
-  height: 150px;
+  height: 200px;
+  width: 300px;
+  object-fit: cover;
+  object-position: center;
+  cursor: pointer;
+  &:hover {
+    opacity: 0.8;
+  }
+}
+.btn-silver {
+  background-color: silver;
+  &:hover {
+    background-color: silver;
+    opacity: 0.8;
+  }
+}
+
+.f-box {
+  width: 100px;
+  height: 20px;
 }
