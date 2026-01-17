@@ -1,7 +1,21 @@
 html,
 body {
+  background-color: #06030d;
   height: 100%;
   text-align: center;
+}
+:root {
+  --bs-primary: #79c9c5;
+  --bs-primary-rgb: 121, 201, 197; /* 若有使用透明度工具類，建議也提供 RGB 值 */
+  --bs-secondary: #ffe2af;
+  --bs-secondary-rgb: 255, 226, 175;
+}
+/* 為了讓按鈕 hover 效果也跟著變，可能還需要手動調整 */
+.btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: #3f9aae; /* 深一點的顏色 */
+  --bs-btn-hover-border-color: #3f9aae;
 }
 
 .login {
@@ -10,6 +24,10 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  background-image: url("https://images.unsplash.com/photo-1519245659620-e859806a8d3b?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: bottom 30% center;
 }
 
 .form-signin {
@@ -29,5 +47,35 @@ img {
 }
 
 .images {
-  height: 150px;
+  height: 200px;
+  width: 100%;
+  border-radius: 24px;
+  object-fit: cover;
+  object-position: center;
+  cursor: pointer;
+  &:hover {
+    opacity: 0.8;
+  }
+}
+.btn-gray {
+  background-color: rgb(25, 31, 32);
+  &:hover {
+    background-color: rgba(25, 31, 32, 0.8);
+  }
+}
+.bg-nav-theme {
+  background-color: rgba(210, 210, 203, 0.7);
+}
+.f-box {
+  width: 100px;
+  height: 20px;
+}
+.dark-blur-frame {
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+}
+.btn-hover-white {
+  &:hover {
+    color: white;
+  }
 }
