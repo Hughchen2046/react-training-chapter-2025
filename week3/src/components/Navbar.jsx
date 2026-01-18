@@ -3,20 +3,6 @@ import * as bootstrap from "bootstrap";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 
-const dataFormat = {
-  id: "",
-  imageUrl: "",
-  title: "",
-  category: "",
-  unit: "",
-  origin_price: "",
-  price: "",
-  description: "",
-  content: "",
-  is_enabled: false,
-  imagesUrl: [],
-};
-
 const apiPath = import.meta.env.VITE_API_PATH;
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
@@ -24,7 +10,60 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
   const [tempProduct, setTempProduct] = useState(null);
   const modalRef = useRef(null);
   const dataModalRef = useRef(null);
-  const handleDelete = async (id) => {
+  const dataFormat = {
+    title: "",
+    category: "",
+    origin_price: "",
+    price: "",
+    unit: "",
+    description: "",
+    content: "",
+    is_enabled: false,
+    imageUrl: "",
+    imagesUrl: [],
+  };
+
+  const [tempoProduct, setTempoProduct] = useState(dataFormat);
+  const [modalStyle, setModalStyle] = useState(""); //設定不同類型的modal
+
+  const modalInputChange = (e) => {
+    //處理modal的input
+    const { id, value, checked, type } = e.target;
+    setTempoProduct((prev) => ({
+      ...prev,
+      [id]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleImageChange = (e, index) => {
+    const { value } = e.target;
+    const newImages = [...tempoProduct.imagesUrl];
+    newImages[index] = value;
+
+    // 當input內容為""時，自動移除該項目
+    if (value.trim() === "") {
+      newImages.splice(index, 1);
+    }
+
+    setTempoProduct((prev) => ({ ...prev, imagesUrl: newImages }));
+  };
+
+  const addImage = () => {
+    setTempoProduct((prev) => ({
+      ...prev,
+      imagesUrl: [...(prev.imagesUrl || []), ""],
+    }));
+  };
+
+  const removeImage = () => {
+    setTempoProduct((prev) => {
+      const restImages = [...(prev.imagesUrl || [])];
+      restImages.pop();
+      return { ...prev, imagesUrl: restImages };
+    });
+  };
+
+  const deleteProduct = async (id) => {
     if (!window.confirm("確定要刪除此產品嗎?")) return;
     try {
       await axios.delete(`${baseUrl}/api/${apiPath}/admin/product/${id}`);
@@ -46,12 +85,50 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
       });
   }, []);
 
-  const openDataModal = () => {
+  const openDataModal = (product, style) => {
+    // console.log(product);
+    setTempoProduct({
+      ...dataFormat,
+      ...product,
+      imagesUrl: product.imagesUrl || [],
+    });
+    setModalStyle(style);
     dataModalRef.current.show();
   };
 
   const closeDataModal = () => {
     dataModalRef.current.hide();
+  };
+
+  //更新產品
+  const updateProduct = async (id) => {
+    let api = `${baseUrl}/api/${apiPath}/admin/product`;
+    let method = "post";
+
+    if (modalStyle === "edit") {
+      api = `${baseUrl}/api/${apiPath}/admin/product/${id}`;
+      method = "put";
+    }
+
+    const productData = {
+      data: {
+        ...tempoProduct,
+        origin_price: Number(tempoProduct.origin_price),
+        price: Number(tempoProduct.price),
+        is_enabled: tempoProduct.is_enabled ? 1 : 0,
+        imagesUrl: tempoProduct.imagesUrl
+          ? tempoProduct.imagesUrl.filter((url) => url !== "")
+          : [],
+      },
+    };
+    try {
+      const res = await axios[method](api, productData);
+      alert(res.data.message);
+      getData();
+      closeDataModal();
+    } catch (error) {
+      alert("失敗: " + (error.response?.data?.message || "網路錯誤"));
+    }
   };
 
   return (
@@ -150,7 +227,7 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                 <h2 className="text-light mb-3">Latest Arrivals for Sale</h2>
                 <button
                   className=" position-fixed z-1 fw-bold top-0 end-0 my-3 me-3 btn btn-light"
-                  onClick={() => openDataModal()}
+                  onClick={() => openDataModal(dataFormat, "create")}
                 >
                   新增產品資料
                 </button>
@@ -197,13 +274,17 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                           role="group"
                           aria-label="Basic mixed styles example"
                         >
-                          <button type="button" className="btn btn-success">
+                          <button
+                            type="button"
+                            className="btn btn-success"
+                            onClick={() => openDataModal(item, "edit")}
+                          >
                             編輯
                           </button>
                           <button
                             type="button"
                             className="btn btn-danger"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => deleteProduct(item.id)}
                           >
                             刪除
                           </button>
@@ -248,7 +329,7 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                             />
                             <h5 className="mt-2">更多圖片：</h5>
                             <div className="d-flex flex-wrap gap-2">
-                              {tempProduct.imagesUrl.map((url, index) => (
+                              {tempProduct.imagesUrl?.map((url, index) => (
                                 <img
                                   key={index}
                                   src={url}
@@ -333,9 +414,11 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
       >
         <div className="modal-dialog modal-xl fw-bold modal-dialog-centered modal-dialog-scrollable">
           <div className="modal-content">
-            <div className="modal-header bg-primary">
+            <div
+              className={`modal-header bg-${modalStyle === "create" ? "primary" : "warning"}`}
+            >
               <h1 className="modal-title fs-6 fw-bold" id="addDataModalLabel">
-                新增產品資訊
+                {modalStyle === "create" ? "新增產品資訊" : "編輯產品資訊"}
               </h1>
               <button
                 type="button"
@@ -347,37 +430,74 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
             </div>
             <div className="modal-body">
               <div className="row">
-                <div className="col-sm-4">
+                <div className="col-4">
                   <div className="mb-2">
                     <div className="mb-3">
                       <label htmlFor="imageUrl" className="form-label">
-                        輸入圖片網址
+                        產品封面圖: 請輸入圖片網址
                       </label>
                       <input
                         type="text"
-                        className="form-control"
+                        className="form-control bg-nav-theme"
                         id="imageUrl"
                         placeholder="請輸入圖片連結"
+                        value={tempoProduct.imageUrl}
+                        onChange={(e) => modalInputChange(e)}
                       />
                     </div>
-                    <img className="img-fluid" alt="主圖" />
+                    {tempoProduct.imageUrl && (
+                      <img
+                        className="img-fluid"
+                        alt="主圖"
+                        src={tempoProduct.imageUrl}
+                      />
+                    )}
                   </div>
-                  <div>
-                    <div className="mb-2">
-                      <input type="text" />
-                      <img className="img-preview mb-2" />
-                    </div>
-                    <div className="d-flex justify-content-between">
-                      <button className="btn btn-outline-primary btn-sm w-100">
-                        新增圖片
-                      </button>
-                      <button className="btn btn-outline-danger btn-sm w-100">
-                        取消圖片
-                      </button>
-                    </div>
+                  <div className="mb-2">
+                    {tempoProduct.imagesUrl?.map((item, index) => {
+                      return (
+                        <div key={index}>
+                          <label htmlFor="imagesUrl" className="form-label">
+                            請輸入新增圖片網址 (最多五組)
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control bg-nav-theme"
+                            id={`imagesUrl_${index}`}
+                            placeholder="請輸入圖片連結"
+                            value={item}
+                            onChange={(e) => handleImageChange(e, index)}
+                          />
+                          {item && (
+                            <img className="img-preview mb-2" src={item} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="d-flex justify-content-between gap-2">
+                    {tempoProduct.imagesUrl &&
+                      (tempoProduct.imagesUrl.length < 5 ||
+                        tempoProduct.imagesUrl.length === 0) && (
+                        <button
+                          className="btn btn-outline-primary btn-sm w-100"
+                          onClick={addImage}
+                        >
+                          新增圖片
+                        </button>
+                      )}
+                    {tempoProduct.imagesUrl &&
+                      tempoProduct.imagesUrl.length > 0 && (
+                        <button
+                          className="btn btn-outline-danger btn-sm w-100"
+                          onClick={removeImage}
+                        >
+                          取消圖片
+                        </button>
+                      )}
                   </div>
                 </div>
-                <div className="col-sm-8">
+                <div className="col-8">
                   <div className="mb-3">
                     <label htmlFor="title" className="form-label">
                       標題
@@ -385,8 +505,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                     <input
                       id="title"
                       type="text"
-                      className="form-control"
+                      className="form-control bg-nav-theme"
                       placeholder="請輸入標題"
+                      value={tempoProduct.title}
+                      onChange={(e) => modalInputChange(e)}
                     />
                   </div>
 
@@ -398,8 +520,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                       <input
                         id="category"
                         type="text"
-                        className="form-control"
+                        className="form-control bg-nav-theme"
                         placeholder="請輸入分類"
+                        value={tempoProduct.category}
+                        onChange={(e) => modalInputChange(e)}
                       />
                     </div>
                     <div className="mb-3 col-md-6">
@@ -409,8 +533,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                       <input
                         id="unit"
                         type="text"
-                        className="form-control"
+                        className="form-control bg-nav-theme"
                         placeholder="請輸入單位"
+                        value={tempoProduct.unit}
+                        onChange={(e) => modalInputChange(e)}
                       />
                     </div>
                   </div>
@@ -423,8 +549,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                         id="origin_price"
                         type="number"
                         min="0"
-                        className="form-control"
+                        className="form-control bg-nav-theme"
                         placeholder="請輸入原價"
+                        value={tempoProduct.origin_price}
+                        onChange={(e) => modalInputChange(e)}
                       />
                     </div>
                     <div className="mb-3 col-md-6">
@@ -435,8 +563,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                         id="price"
                         type="number"
                         min="0"
-                        className="form-control"
+                        className="form-control bg-nav-theme"
                         placeholder="請輸入售價"
+                        value={tempoProduct.price}
+                        onChange={(e) => modalInputChange(e)}
                       />
                     </div>
                   </div>
@@ -447,8 +577,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                     </label>
                     <textarea
                       id="description"
-                      className="form-control"
+                      className="form-control bg-nav-theme"
                       placeholder="請輸入產品描述"
+                      value={tempoProduct.description}
+                      onChange={(e) => modalInputChange(e)}
                     ></textarea>
                   </div>
                   <div className="mb-3">
@@ -457,8 +589,10 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                     </label>
                     <textarea
                       id="content"
-                      className="form-control"
+                      className="form-control bg-nav-theme"
                       placeholder="請輸入說明內容"
+                      value={tempoProduct.content}
+                      onChange={(e) => modalInputChange(e)}
                     ></textarea>
                   </div>
                   <div className="mb-3">
@@ -467,6 +601,8 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
                         id="is_enabled"
                         className="form-check-input"
                         type="checkbox"
+                        checked={tempoProduct.is_enabled}
+                        onChange={(e) => modalInputChange(e)}
                       />
                       <label className="form-check-label" htmlFor="is_enabled">
                         是否啟用
@@ -485,7 +621,11 @@ export default function Navbar({ products, setProducts, getData, onLogout }) {
               >
                 取消
               </button>
-              <button type="submit" className="btn btn-primary fw-bold">
+              <button
+                type="submit"
+                className="btn btn-primary fw-bold"
+                onClick={() => updateProduct(tempoProduct.id)}
+              >
                 送出
               </button>
             </div>
