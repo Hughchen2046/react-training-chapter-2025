@@ -1,5 +1,5 @@
 import * as bootstrap from "bootstrap";
-import Navbar from "./Navbar";
+import Navbar from "../../../week4/src/component/Navbar";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import "../assets/style.css";

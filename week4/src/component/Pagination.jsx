@@ -1,65 +1,53 @@
-import PropTypes from 'prop-types';
-
-function Pagination({ pagination, changePage }) {
-  const handleClick = (event, page) => {
-    event.preventDefault();
-    changePage(page);
-  };
-
+export default function Pagination({ pageInfo, onPageChange }) {
   return (
-    <nav aria-label="Page navigation example">
-      <ul className="pagination">
-        <li className="page-item">
+    <nav aria-label="Page navigation">
+      <ul className="pagination justify-content-center">
+        <li className={`page-item ${!pageInfo.has_pre && "disabled"}`}>
           <a
-            href="/"
-            aria-label="Previous"
-            className={`page-link ${pagination.has_pre ? '' : 'disabled'}`}
-            onClick={(event) => handleClick(event, pagination.current_page - 1)}
+            className="page-link"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onPageChange(pageInfo.current_page - 1);
+            }}
           >
-            <span aria-hidden="true">&laquo;</span>
+            &laquo;
           </a>
         </li>
-        {[...new Array(pagination.total_pages)].map(
-          (
-            _,
-            i,
-          ) => (
-            <li className="page-item" key={`${i}_page`}>
+
+        {Array.from({ length: pageInfo.total_pages }, (_, i) => i + 1).map(
+          (page) => (
+            <li
+              key={page}
+              className={`page-item ${page === pageInfo.current_page && "active"}`}
+            >
               <a
-                className={`page-link ${
-                  i + 1 === pagination.current_page && 'active'
-                }`}
-                href="/"
-                onClick={(event) => handleClick(event, i + 1)}
+                className="page-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(page);
+                }}
               >
-                {i + 1}
+                {page}
               </a>
             </li>
           ),
         )}
-        <li className="page-item">
+
+        <li className={`page-item ${!pageInfo.has_next && "disabled"}`}>
           <a
-            className={`page-link ${pagination.has_next ? '' : 'disabled'}`}
-            onClick={(event) => handleClick(event, pagination.current_page + 1)}
-            href="/"
-            aria-label="Next"
+            className="page-link"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onPageChange(pageInfo.current_page + 1);
+            }}
           >
-            <span aria-hidden="true">&raquo;</span>
+            &raquo;
           </a>
         </li>
       </ul>
     </nav>
   );
 }
-
-Pagination.propTypes = {
-  pagination: PropTypes.shape({
-    total_pages: PropTypes.number,
-    current_page: PropTypes.number,
-    has_pre: PropTypes.bool,
-    has_next: PropTypes.bool,
-  }).isRequired,
-  changePage: PropTypes.func.isRequired,
-};
-
-export default Pagination;

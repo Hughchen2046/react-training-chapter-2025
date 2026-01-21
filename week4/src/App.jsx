@@ -1,366 +1,213 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-
-import * as bootstrap from "bootstrap";
-import ProductModal from "./component/ProductModal";
-import Pagination from "./component/Pagination";
-
+import Login from "./component/Login";
+import Navbar from "./component/Navbar";
 import "./assets/style.css";
 
-const API_BASE = "https://ec-course-api.hexschool.io/v2";
-const API_PATH = "";
+const apiPath = import.meta.env.VITE_API_PATH;
+const baseUrl = import.meta.env.VITE_BASE_URL;
 
 function App() {
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
-
   const [isAuth, setIsAuth] = useState(false);
   const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState({});
+  const [pageInfo, setPageInfo] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("");
+  const [detailProduct, setDetailProduct] = useState(null);
 
-  const productModalRef = useRef(null);
-  const [modalType, setModalType] = useState("");
-  const [templateData, setTemplateData] = useState({
-    id: "",
-    imageUrl: "",
+  const dataFormat = {
     title: "",
     category: "",
+    origin_price: 100,
+    price: 100,
     unit: "",
-    originPrice: 0,
-    price: 0,
     description: "",
     content: "",
-    isEnabled: false,
+    is_enabled: 0,
+    imageUrl: "",
     imagesUrl: [],
-  });
+    starRating: 5,
+  };
+  const [modalProduct, setModalProduct] = useState(dataFormat);
 
-  const openModal = (product, type) => {
-    setTemplateData({
-      id: product.id || "",
-      imageUrl: product.imageUrl || "",
-      title: product.title || "",
-      category: product.category || "",
-      unit: product.unit || "",
-      originPrice: product.originPrice || 0,
-      price: product.price || 0,
-      description: product.description || "",
-      content: product.content || "",
-      isEnabled: product.isEnabled || false,
-      imagesUrl: product.imagesUrl || [],
-    });
-    productModalRef.current.show();
-    setModalType(type);
+  // 取得產品資料
+  const getData = async (page = 1) => {
+    try {
+      const res = await axios.get(
+        `${baseUrl}/api/${apiPath}/admin/products?page=${page}&limit=9`,
+      );
+      setProducts(res.data.products);
+      setPageInfo(res.data.pagination);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleFileChange = async (e) => {
-    const url = `${API_BASE}/api/${API_PATH}/admin/upload`;
-
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const formData = new FormData();
-      formData.append("file-to-upload", file);
-
-      let res = await axios.post(url, formData);
-      const uploadedImageUrl = res.data.imageUrl;
-
-      setTemplateData((prevTemplateData) => ({
-        ...prevTemplateData,
-        imageUrl: uploadedImageUrl,
-      }));
-    } catch (error) {
-      console.error("Upload error:", error);
-    }
+  const openModal = (product, mode) => {
+    setModalMode(mode);
+    setModalProduct(
+      product ? { ...product, imagesUrl: product.imagesUrl || [] } : dataFormat,
+    );
+    setIsModalOpen(true);
   };
 
   const closeModal = () => {
-    productModalRef.current.hide();
-  };
-
-  const updateProductData = async (id) => {
-    let product;
-    if (modalType === "edit") {
-      product = `product/${id}`;
-    } else {
-      product = `product`;
-    }
-
-    const url = `${API_BASE}/api/${API_PATH}/admin/${product}`;
-    const productData = {
-      data: {
-        ...templateData,
-        origin_price: Number(templateData.originPrice),
-        price: Number(templateData.price),
-        is_enabled: templateData.isEnabled ? 1 : 0,
-        imageUrl: templateData.imageUrl,
-      },
-    };
-
-    try {
-      let response;
-      if (modalType === "edit") {
-        response = await axios.put(url, productData);
-        console.log("更新成功", response.data);
-      } else {
-        response = await axios.post(url, productData);
-        console.log("新增成功", response.data);
-      }
-
-      productModalRef.current.hide();
-      getProductData();
-    } catch (err) {
-      if (modalType === "edit") {
-        console.error("更新失敗", err.response.data.message);
-      } else {
-        console.error("新增失敗", err.response.data.message);
-      }
-    }
-  };
-
-  const delProductData = async (id) => {
-    try {
-      const response = await axios.delete(
-        `${API_BASE}/api/${API_PATH}/admin/product/${id}`
-      );
-      console.log("刪除成功", response.data);
-      productModalRef.current.hide();
-      getProductData();
-    } catch (err) {
-      console.error("刪除失敗", err.response.data.message);
-    }
+    setIsModalOpen(false);
   };
 
   const handleInputChange = (e) => {
     const { id, value, type, checked } = e.target;
-
-    if (id === "username" || id === "password") {
-      setFormData((prevData) => ({
-        ...prevData,
-        [id]: value,
-      }));
-    } else {
-      setTemplateData((prevData) => ({
-        ...prevData,
-        [id]: type === "checkbox" ? checked : value,
-      }));
-    }
-  };
-
-  const handleImageChange = (index, value) => {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl];
-      newImages[index] = value;
-
-      if (
-        value !== "" &&
-        index === newImages.length - 1 &&
-        newImages.length < 5
-      ) {
-        newImages.push("");
-      }
-
-      if (newImages.length > 1 && newImages[newImages.length - 1] === "") {
-        newImages.pop();
-      }
-
-      return { ...prevData, imagesUrl: newImages };
-    });
-  };
-
-  const handleAddImage = () => {
-    setTemplateData((prevData) => ({
-      ...prevData,
-      imagesUrl: [...prevData.imagesUrl, ""],
+    setModalProduct((prev) => ({
+      ...prev,
+      [id]: type === "checkbox" ? (checked ? 1 : 0) : value,
     }));
   };
 
-  const handleRemoveImage = () => {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl];
-      newImages.pop();
-      return { ...prevData, imagesUrl: newImages };
+  const handleImageChange = (e, index) => {
+    const { value } = e.target;
+    const newImages = [...modalProduct.imagesUrl];
+    newImages[index] = value;
+    setModalProduct((prev) => ({ ...prev, imagesUrl: newImages }));
+  };
+
+  const addImage = () => {
+    setModalProduct((prev) => ({
+      ...prev,
+      imagesUrl: [...(prev.imagesUrl || []), ""],
+    }));
+  };
+
+  const removeImage = () => {
+    setModalProduct((prev) => {
+      const restImages = [...(prev.imagesUrl || [])];
+      restImages.pop();
+      return { ...prev, imagesUrl: restImages };
     });
   };
 
-  const getProductData = async (page = 1) => {
+  const updateProduct = async () => {
+    let api = `${baseUrl}/api/${apiPath}/admin/product`;
+    let method = "post";
+
+    if (modalMode === "edit") {
+      api = `${baseUrl}/api/${apiPath}/admin/product/${modalProduct.id}`;
+      method = "put";
+    }
+
+    const payload = {
+      data: {
+        ...modalProduct,
+        origin_price: Number(modalProduct.origin_price),
+        price: Number(modalProduct.price),
+        starRating: Number(modalProduct.starRating || 5),
+      },
+    };
+
     try {
-      const response = await axios.get(
-        `${API_BASE}/api/${API_PATH}/admin/products?page=${page}`
-      );
-      setProducts(response.data.products);
-      setPagination(response.data.pagination);
-    } catch (err) {
-      console.log(err);
+      const res = await axios[method](api, payload);
+      alert(res.data.message);
+      closeModal();
+      getData(pageInfo.current_page);
+    } catch (error) {
+      alert("失敗: " + (error.response?.data?.message || "網路錯誤"));
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const deleteProduct = async (id) => {
     try {
-      const response = await axios.post(`${API_BASE}/admin/signin`, formData);
-      const { token, expired } = response.data;
-      document.cookie = `hexToken=${token};expires=${new Date(expired)}`;
-      axios.defaults.headers.common.Authorization = `${token}`;
+      const res = await axios.delete(
+        `${baseUrl}/api/${apiPath}/admin/product/${id}`,
+      );
+      alert(res.data.message);
+      closeModal();
+      getData(pageInfo.current_page);
+    } catch (error) {
+      alert("刪除失敗: " + (error.response?.data?.message || "網路錯誤"));
+    }
+  };
 
-      getProductData()
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file-to-upload", file);
+
+    try {
+      const res = await axios.post(
+        `${baseUrl}/api/${apiPath}/admin/upload`,
+        formData,
+      );
+      const imageUrl = res.data.imageUrl;
+      setModalProduct((prev) => ({
+        ...prev,
+        imageUrl: imageUrl,
+      }));
+      alert("上傳成功");
+    } catch (error) {
+      alert("上傳失敗: " + (error.response?.data?.message || "網路錯誤"));
+    }
+  };
+
+  // 檢查登入狀態
+  const checkLogin = async () => {
+    try {
+      await axios.post(`${baseUrl}/api/user/check`);
       setIsAuth(true);
-    } catch (err) {
-      alert(`登入失敗：${err.response.data.message}`);
+      getData();
+    } catch (error) {
+      console.error(error);
+      setIsAuth(false);
     }
   };
 
   useEffect(() => {
-    const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
-      "$1"
-    );
-    axios.defaults.headers.common.Authorization = token;
-    productModalRef.current = new bootstrap.Modal("#productModal", {
-      keyboard: false,
-    });
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("hexToken="))
+      ?.split("=")[1];
 
-    document
-      .querySelector("#productModal")
-      .addEventListener("hide.bs.modal", () => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      });
-
-      const checkAdmin = async () => {
-        try {
-          await axios.post(`${API_BASE}/api/user/check`);
-          getProductData();
-          setIsAuth(true);
-        } catch (err) {
-          console.log(err.response.data.message);
-        }
-      };
-    checkAdmin();
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = token;
+      checkLogin();
+    }
   }, []);
 
+  const handleLogout = () => {
+    document.cookie =
+      "hexToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    delete axios.defaults.headers.common["Authorization"];
+    setIsAuth(false);
+    alert("已登出");
+  };
+
   return (
-    <>
+    <div className="App">
       {isAuth ? (
-        <div>
-          <div className="container">
-            <div className="d-flex justify-content-between mt-4">
-              <button
-                className="btn btn-primary"
-                onClick={() => openModal("", "new")}
-              >
-                建立新的產品
-              </button>
-            </div>
-            <table className="table mt-4">
-              <thead>
-                <tr>
-                  <th width="120">分類</th>
-                  <th>產品名稱</th>
-                  <th width="120">原價</th>
-                  <th width="120">售價</th>
-                  <th width="100">是否啟用</th>
-                  <th width="120">編輯</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td>{product.category}</td>
-                    <td>{product.title}</td>
-                    <td className="text-end">{product.origin_price}</td>
-                    <td className="text-end">{product.price}</td>
-                    <td>
-                      {product.is_enabled ? (
-                        <span className="text-success">啟用</span>
-                      ) : (
-                        <span>未啟用</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="btn-group">
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary btn-sm"
-                          onClick={() => openModal(product, "edit")}
-                        >
-                          編輯
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={() => openModal(product, "delete")}
-                        >
-                          刪除
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Pagination pagination={pagination} changePage={getProductData} />
-          </div>
-        </div>
+        <Navbar
+          products={products}
+          pageInfo={pageInfo}
+          getData={getData}
+          onLogout={handleLogout}
+          onOpenModal={openModal}
+          onDetail={setDetailProduct}
+          detailProduct={detailProduct}
+          modalMode={modalMode}
+          isModalOpen={isModalOpen}
+          modalProduct={modalProduct}
+          onCloseModal={closeModal}
+          onUpdateProduct={updateProduct}
+          onDeleteProduct={deleteProduct}
+          onInputChange={handleInputChange}
+          onImageChange={handleImageChange}
+          onAddImage={addImage}
+          onRemoveImage={removeImage}
+          onFileUpload={handleFileUpload}
+        />
       ) : (
-        <div className="container login mt-5">
-          <div className="row justify-content-center">
-            <h1 className="h3 mb-3 font-weight-normal">請先登入</h1>
-            <div className="col-8">
-              <form id="form" className="form-signin" onSubmit={handleSubmit}>
-                <div className="form-floating mb-3">
-                  <input
-                    type="email"
-                    className="form-control"
-                    id="username"
-                    placeholder="name@example.com"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    required
-                    autoFocus
-                  />
-                  <label htmlFor="username">Email address</label>
-                </div>
-                <div className="form-floating">
-                  <input
-                    type="password"
-                    className="form-control"
-                    id="password"
-                    placeholder="Password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <label htmlFor="password">Password</label>
-                </div>
-                <button
-                  className="btn btn-lg btn-primary w-100 mt-3"
-                  type="submit"
-                >
-                  登入
-                </button>
-              </form>
-            </div>
-          </div>
-          <p className="mt-5 mb-3 text-muted">&copy; 2025~∞ - 六角學院</p>
-        </div>
+        <Login setIsAuth={setIsAuth} getData={getData} />
       )}
-      <ProductModal
-        modalType={modalType}
-        templateData={templateData}
-        onCloseModal={closeModal}
-        onInputChange={handleInputChange}
-        onFileChange={handleFileChange}
-        onImageChange={handleImageChange}
-        onAddImage={handleAddImage}
-        onRemoveImage={handleRemoveImage}
-        onUpdateProduct={updateProductData}
-        onDeleteProduct={delProductData}
-      />
-    </>
+    </div>
   );
 }
 

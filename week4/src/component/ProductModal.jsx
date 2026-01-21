@@ -1,217 +1,225 @@
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as bootstrap from "bootstrap";
-import PropTypes from "prop-types";
 
-function ProductModal({
-  modalType,
-  templateData,
-  onCloseModal,
-  onFileChange,
+export default function ProductModal({
+  mode,
+  tempProduct,
+  isOpen,
+  onClose,
+  onUpdateProduct,
   onInputChange,
   onImageChange,
   onAddImage,
   onRemoveImage,
-  onUpdateProduct,
   onDeleteProduct,
+  onFileUpload,
 }) {
-  const productModalRef = useRef(null);
+  const modalRef = useRef(null);
+  const bsModal = useRef(null);
 
   useEffect(() => {
-    productModalRef.current = new bootstrap.Modal("#productModal", {
-      keyboard: false,
-    });
-  }, [modalType]);
+    if (modalRef.current) {
+      bsModal.current = new bootstrap.Modal(modalRef.current, {
+        backdrop: "static",
+        keyboard: false,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      bsModal.current?.show();
+    } else {
+      bsModal.current?.hide();
+    }
+  }, [isOpen]);
 
   return (
     <div
       className="modal fade"
-      id="productModal"
+      ref={modalRef}
       tabIndex="-1"
       aria-labelledby="productModalLabel"
       aria-hidden="true"
-      ref={productModalRef}
     >
-      <div className="modal-dialog modal-xl">
-        <div className="modal-content border-0">
+      <div
+        className={`modal-dialog ${mode === "delete" ? "modal-dialog-centered" : "modal-xl modal-dialog-centered modal-dialog-scrollable"}`}
+      >
+        <div className="modal-content border-0 shadow-lg">
           <div
-            className={`modal-header ${
-              modalType === "delete" ? "bg-danger" : "bg-dark"
-            } text-white`}
+            className={`modal-header ${mode === "delete" ? "bg-danger" : mode === "create" ? "bg-primary" : "bg-warning"} text-white`}
           >
-            <h5 id="productModalLabel" className="modal-title">
-              <span>
-                {modalType === "delete"
-                  ? "刪除產品"
-                  : modalType === "edit"
-                  ? "編輯產品"
-                  : "新增產品"}
-              </span>
+            <h5 className="modal-title" id="productModalLabel">
+              {mode === "create" && "新增產品"}
+              {mode === "edit" && "編輯產品"}
+              {mode === "delete" && "刪除產品"}
             </h5>
             <button
               type="button"
-              className="btn-close"
-              data-bs-dismiss="modal"
+              className="btn-close btn-close-white"
+              onClick={onClose}
               aria-label="Close"
             ></button>
           </div>
+
           <div className="modal-body">
-            {modalType === "delete" ? (
+            {mode === "delete" ? (
               <p className="h4">
-                確定要刪除
-                <span className="text-danger">{templateData.title}</span>
-                嗎?
+                是否刪除{" "}
+                <span className="text-danger fw-bold">
+                  {tempProduct?.title}
+                </span>
+                ？ (刪除後將無法恢復)
               </p>
             ) : (
               <div className="row">
                 <div className="col-sm-4">
-                  <div className="mb-2">
-                    <div className="mb-3">
-                      <label htmlFor="fileInput" className="form-label">
-                        圖片上傳
-                      </label>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png"
-                        className="form-control"
-                        id="fileInput"
-                        onChange={onFileChange}
-                      />
-                    </div>
-                    <p className="my-2">
-                    or
-                    </p>
-                    <div className="mb-3">
-                      <label htmlFor="imageUrl" className="form-label">
-                        輸入圖片網址
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        id="imageUrl"
-                        placeholder="請輸入圖片連結"
-                        value={templateData.imageUrl}
-                        onChange={onInputChange}
-                      />
-                    </div>
-                    <img
-                      className="img-fluid"
-                      src={templateData.imageUrl}
-                      alt="主圖"
+                  <div className="mb-3">
+                    <label htmlFor="imageUrl" className="form-label">
+                      主圖網址
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="imageUrl"
+                      value={tempProduct?.imageUrl || ""}
+                      onChange={onInputChange}
                     />
                   </div>
-                  <div>
-                    {templateData.imagesUrl.map((image, index) => (
+                  <div className="mb-3">
+                    <label htmlFor="file-to-upload" className="form-label">
+                      或者是 上傳圖片
+                    </label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="file-to-upload"
+                      onChange={onFileUpload}
+                    />
+                  </div>
+                  {tempProduct?.imageUrl && (
+                    <img
+                      src={tempProduct.imageUrl}
+                      alt="主圖"
+                      className="img-fluid mb-3 rounded"
+                    />
+                  )}
+
+                  {/* 多圖新增 */}
+                  <div className="mb-3">
+                    <label className="form-label">其他圖片</label>
+                    {tempProduct?.imagesUrl?.map((url, index) => (
                       <div key={index} className="mb-2">
                         <input
                           type="text"
-                          value={image}
-                          onChange={(e) => onImageChange(index, e.target.value)}
+                          className="form-control mb-1"
                           placeholder={`圖片網址 ${index + 1}`}
-                          className="form-control mb-2"
+                          value={url}
+                          onChange={(e) => onImageChange(e, index)}
                         />
-                        {image && (
+                        {url && (
                           <img
-                            src={image}
+                            src={url}
                             alt={`副圖 ${index + 1}`}
-                            className="img-preview mb-2"
+                            className="img-fluid mb-2 rounded"
                           />
                         )}
                       </div>
                     ))}
-
-                    <div className="d-flex justify-content-between">
-                      {templateData.imagesUrl.length < 5 &&
-                        templateData.imagesUrl[
-                          templateData.imagesUrl.length - 1
-                        ] !== "" && (
-                          <button
-                            className="btn btn-outline-primary btn-sm w-100"
-                            onClick={onAddImage}
-                          >
-                            新增圖片
-                          </button>
-                        )}
-
-                      {templateData.imagesUrl.length >= 1 && (
+                    <div className="d-flex gap-2">
+                      {(!tempProduct?.imagesUrl ||
+                        tempProduct.imagesUrl.length < 5) && (
                         <button
+                          type="button"
+                          className="btn btn-outline-primary btn-sm w-100"
+                          onClick={onAddImage}
+                        >
+                          新增圖片
+                        </button>
+                      )}
+                      {tempProduct?.imagesUrl?.length > 0 && (
+                        <button
+                          type="button"
                           className="btn btn-outline-danger btn-sm w-100"
                           onClick={onRemoveImage}
                         >
-                          取消圖片
+                          取消最後一張
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
+
                 <div className="col-sm-8">
                   <div className="mb-3">
                     <label htmlFor="title" className="form-label">
                       標題
                     </label>
                     <input
-                      id="title"
                       type="text"
                       className="form-control"
+                      id="title"
                       placeholder="請輸入標題"
-                      value={templateData.title}
+                      value={tempProduct?.title || ""}
                       onChange={onInputChange}
                     />
                   </div>
 
-                  <div className="row">
-                    <div className="mb-3 col-md-6">
+                  <div className="row g-3 mb-3">
+                    <div className="col-md-6">
                       <label htmlFor="category" className="form-label">
                         分類
                       </label>
                       <input
-                        id="category"
                         type="text"
                         className="form-control"
+                        id="category"
                         placeholder="請輸入分類"
-                        value={templateData.category}
+                        value={tempProduct?.category || ""}
                         onChange={onInputChange}
                       />
                     </div>
-                    <div className="mb-3 col-md-6">
+                    <div className="col-md-6">
                       <label htmlFor="unit" className="form-label">
                         單位
                       </label>
                       <input
-                        id="unit"
                         type="text"
                         className="form-control"
+                        id="unit"
                         placeholder="請輸入單位"
-                        value={templateData.unit}
+                        value={tempProduct?.unit || ""}
                         onChange={onInputChange}
                       />
                     </div>
                   </div>
-                  <div className="row">
-                    <div className="mb-3 col-md-6">
-                      <label htmlFor="originPrice" className="form-label">
+
+                  <div className="row g-3 mb-3">
+                    <div className="col-md-6">
+                      <label htmlFor="origin_price" className="form-label">
                         原價
                       </label>
                       <input
-                        id="originPrice"
                         type="number"
-                        min="0"
                         className="form-control"
+                        id="origin_price"
                         placeholder="請輸入原價"
-                        value={templateData.originPrice}
+                        min="0"
+                        value={tempProduct?.origin_price || ""}
                         onChange={onInputChange}
                       />
                     </div>
-                    <div className="mb-3 col-md-6">
+                    <div className="col-md-6">
                       <label htmlFor="price" className="form-label">
                         售價
                       </label>
                       <input
-                        id="price"
                         type="number"
-                        min="0"
                         className="form-control"
+                        id="price"
                         placeholder="請輸入售價"
-                        value={templateData.price}
+                        min="0"
+                        value={tempProduct?.price || ""}
                         onChange={onInputChange}
                       />
                     </div>
@@ -222,10 +230,11 @@ function ProductModal({
                       產品描述
                     </label>
                     <textarea
-                      id="description"
                       className="form-control"
+                      id="description"
+                      rows="3"
                       placeholder="請輸入產品描述"
-                      value={templateData.description}
+                      value={tempProduct?.description || ""}
                       onChange={onInputChange}
                     ></textarea>
                   </div>
@@ -234,60 +243,72 @@ function ProductModal({
                       說明內容
                     </label>
                     <textarea
-                      id="content"
                       className="form-control"
+                      id="content"
+                      rows="3"
                       placeholder="請輸入說明內容"
-                      value={templateData.content}
+                      value={tempProduct?.content || ""}
                       onChange={onInputChange}
                     ></textarea>
                   </div>
                   <div className="mb-3">
                     <div className="form-check">
                       <input
-                        id="isEnabled"
                         className="form-check-input"
                         type="checkbox"
-                        checked={templateData.isEnabled}
+                        id="is_enabled"
+                        checked={!!tempProduct?.is_enabled}
                         onChange={onInputChange}
                       />
-                      <label className="form-check-label" htmlFor="isEnabled">
-                        是否啟用
+                      <label className="form-check-label" htmlFor="is_enabled">
+                        是否有庫存
                       </label>
                     </div>
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="starRating" className="form-label">
+                      期待商品星級 (1-5)
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      id="starRating"
+                      min="1"
+                      max="5"
+                      placeholder="請輸入星級"
+                      value={tempProduct?.starRating || ""}
+                      onChange={onInputChange}
+                    />
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <div className="modal-footer">
+
+          <div className="modal-footer border-top bg-light">
             <button
               type="button"
-              className="btn btn-outline-secondary"
-              data-bs-dismiss="modal"
-              onClick={() => onCloseModal()}
+              className="btn btn-secondary"
+              onClick={onClose}
             >
               取消
             </button>
-            {modalType === "delete" ? (
-              <div>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() => onDeleteProduct(templateData.id)}
-                >
-                  刪除
-                </button>
-              </div>
+            {mode === "delete" ? (
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => onDeleteProduct(tempProduct.id)}
+              >
+                確認刪除
+              </button>
             ) : (
-              <div>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => onUpdateProduct(templateData.id)}
-                >
-                  確認
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onUpdateProduct(tempProduct.id)}
+              >
+                確認
+              </button>
             )}
           </div>
         </div>
@@ -295,30 +316,3 @@ function ProductModal({
     </div>
   );
 }
-
-ProductModal.propTypes = {
-  modalType: PropTypes.string.isRequired,
-  templateData: PropTypes.shape({
-    id: PropTypes.string,
-    imageUrl: PropTypes.string,
-    title: PropTypes.string,
-    category: PropTypes.string,
-    unit: PropTypes.string,
-    originPrice: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    description: PropTypes.string,
-    content: PropTypes.string,
-    isEnabled: PropTypes.bool,
-    imagesUrl: PropTypes.arrayOf(PropTypes.string),
-  }).isRequired,
-  onCloseModal: PropTypes.func.isRequired,
-  onInputChange: PropTypes.func.isRequired,
-  onFileChange: PropTypes.func.isRequired,
-  onImageChange: PropTypes.func.isRequired,
-  onAddImage: PropTypes.func.isRequired,
-  onRemoveImage: PropTypes.func.isRequired,
-  onUpdateProduct: PropTypes.func.isRequired,
-  onDeleteProduct: PropTypes.func.isRequired,
-};
-
-export default ProductModal;

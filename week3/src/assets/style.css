@@ -79,3 +79,16 @@ img {
     color: white;
   }
 }
+
+.btn-silver {
+  background-color: silver;
+  &:hover {
+    background-color: silver;
+    opacity: 0.8;
+  }
+}
+
+.f-box {
+  width: 100px;
+  height: 20px;
+}
