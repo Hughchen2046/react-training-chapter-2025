@@ -82,7 +82,7 @@ const Home = () => {
           <div className="col-lg-6 mb-5 mb-lg-0">
             <div className="hero-image-frame p-2">
               <img 
-                src="/Gemini_Generated_Image_gtm6clgtm6clgtm6.png" 
+                src="Gemini_Generated_Image_gtm6clgtm6clgtm6.png" 
                 alt="Aura Model" 
                 className="rounded-4 hover-scale-110"
               />

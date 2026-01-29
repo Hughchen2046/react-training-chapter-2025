@@ -9,11 +9,12 @@ const Product = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
 
-  const handleViewMore = async(id) => {
+  const handleViewMore = async(id, num) => {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
-      navigate(`/product/${id}`, { state: { productData: res.data } });
-      // console.log(res.data.product);
+      // 因為單一產品 API 不回傳 num，所以從列表傳入
+      const productWithNum = { ...res.data.product, num };
+      navigate(`/product/${id}`, { state: { productData: { ...res.data, product: productWithNum } } });
     } catch (error) {
       console.error("取得產品資料失敗", error);
     }
@@ -23,7 +24,6 @@ const Product = () => {
     const getProduct = async () => {
       try {
         const res = await axios.get(`${API_BASE}/api/${API_PATH}/products`);
-        // console.log(res.data.products);
         setProducts(res.data.products);
       } catch (error) {
         console.error("取得產品資料失敗", error);
@@ -77,7 +77,7 @@ const Product = () => {
                 </div>
                 <button
                   className="btn btn-aurora w-auto"
-                  onClick={() => handleViewMore(product.id)}
+                  onClick={() => handleViewMore(product.id, product.num)}
                 >
                   DISCOVER
                 </button>

@@ -21,7 +21,7 @@ const SingleProduct = () => {
   //  refreshCart nav購物車數量更新 + OutletContext資料
   const outletContext = useOutletContext();
   const refreshCart = outletContext?.refreshCart;
-
+  
   // 獲取購物車中此商品的數量
   const getCartQty = useCallback(async () => {
     if (!id) return;
@@ -70,10 +70,16 @@ const SingleProduct = () => {
     const getProduct = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
-        console.log("從 API 獲取產品資料:", res.data.product);
-        setProduct(res.data.product);
-        setError(null);
+        // 因為單一產品 API 不回傳 num，改為從產品列表獲取
+        const res = await axios.get(`${API_BASE}/api/${API_PATH}/products`);
+        const foundProduct = res.data.products.find(p => p.id === id);
+        
+        if (foundProduct) {
+          setProduct(foundProduct);
+          setError(null);
+        } else {
+          setError("找不到該產品");
+        }
       } catch (err) {
         console.error("取得產品資料失敗", err);
         setError("無法載入產品資料，請稍後再試。");
@@ -89,7 +95,7 @@ const SingleProduct = () => {
 
   // 購物車按鈕
   const addQty = () => {
-    const maxAvailable = product.num - cartQty; // 剩餘可購買數量
+    const maxAvailable = (product.num || 0) - cartQty; // 剩餘可購買數量
     if (qty < maxAvailable) {
       setQty(qty + 1);
     }
@@ -103,7 +109,7 @@ const SingleProduct = () => {
   
   const handleQty = (e) => {
     const value = parseInt(e.target.value);
-    const maxAvailable = product.num - cartQty; // 剩餘可購買數量
+    const maxAvailable = (product.num || 0) - cartQty; // 剩餘可購買數量
     if (!isNaN(value) && value >= 1 && value <= maxAvailable) {
       setQty(value);
     }
@@ -113,7 +119,7 @@ const SingleProduct = () => {
       // 檢查購物車中已有的數量 + 當前要購買的數量是否超過庫存
       const totalQty = cartQty + qty;
       
-      if (totalQty > product.num) {
+      if (totalQty > (product.num || 0)) {
         return;
       }
       
@@ -282,18 +288,22 @@ const SingleProduct = () => {
             )}
             <div className="mb-2 text-start">
               <span className="text-white">原價:</span> 
-              <span className="ms-2 text-secondary text-decoration-line-through">{product.origin_price} 元</span>
+              <span className="ms-2 text-secondary text-decoration-line-through">
+                {product.origin_price ? product.origin_price.toLocaleString() : '0'} 元
+              </span>
             </div>
             <div className="mb-4 text-start">
               <strong className="text-aurora">現價:</strong> 
-              <span className="ms-4 fs-4 fw-bold text-gradient">{product.price} 元</span>
+              <span className="ms-4 fs-4 fw-bold text-gradient">
+                {product.price ? product.price.toLocaleString() : '0'} 元
+              </span>
             </div>
             
             {/* 庫存資訊 */}
             <div className="mb-3 text-start">
               <div className="d-flex justify-content-between align-items-center">
                 <span className="text-white">庫存數量:</span>
-                <strong className="text-aurora">{product.num}</strong>
+                <strong className="text-aurora">{product.num || 0}</strong>
               </div>
 
               {cartQty > 0 && (
@@ -305,7 +315,7 @@ const SingleProduct = () => {
               {cartQty > 0 && (
                 <div className="d-flex justify-content-between align-items-center mt-1">
                   <span className="text-success small">可再購買:</span>
-                  <strong className="text-success">{Math.max(0, product.num - cartQty)}</strong>
+                  <strong className="text-success">{Math.max(0, (product.num || 0) - cartQty)}</strong>
                 </div>
               )}
             </div>
@@ -315,7 +325,7 @@ const SingleProduct = () => {
               <input 
                 type="number" 
                 min={1} 
-                max={Math.max(1, product.num - cartQty)} 
+                max={Math.max(1, (product.num || 0) - cartQty)} 
                 step={1} 
                 className="form-control text-center" 
                 value={qty} 
@@ -328,9 +338,9 @@ const SingleProduct = () => {
               type="submit" 
               className="btn btn-aurora w-100 py-3" 
               onClick={submitToCart}
-              disabled={cartQty >= product.num}
+              disabled={cartQty >= (product.num || 0)}
             >
-              {cartQty >= product.num ? '已達庫存上限' : '立即購買'}
+              {cartQty >= (product.num || 0) ? '已達庫存上限' : '立即購買'}
             </button>
           </div>
         </div>
