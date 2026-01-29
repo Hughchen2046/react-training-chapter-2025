@@ -1,30 +1,28 @@
+
+
 const AdminOrders = () => {
   return (
     <div className="container-fluid p-0">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-black text-gradient">ACQUISITION ORDERS</h2>
-        <div className="d-flex gap-2">
-          <button className="btn btn-aurora-outline btn-sm">EXPORT CSV</button>
-          <button className="btn btn-aurora-outline btn-sm">PRINT LOGS</button>
-        </div>
+        <h2 className="fw-black text-gradient">訂單管理系統</h2>
       </div>
 
       <div className="glass-table-container">
         <table className="glass-table">
           <thead>
             <tr>
-              <th>ORDER ID</th>
-              <th>CLIENT</th>
-              <th>ACQUISITION</th>
-              <th>DATE</th>
-              <th>STATUS</th>
-              <th className="text-end">AMOUNT</th>
+              <th>編號</th>
+              <th>客戶ID</th>
+              <th>訂單ID</th>
+              <th>訂單日期</th>
+              <th>訂單狀態</th>
+              <th className="text-end">訂單金額</th>
             </tr>
           </thead>
           <tbody>
             {[
-              { id: "#TX-9901", client: "Viktor V.", item: "NEBULA HYPERION", date: "2025/01/22", status: "Processing", total: "2,572,500" },
-              { id: "#TX-9902", client: "Elena S.", item: "AURORA SPECTRE", date: "2025/01/23", status: "Delivered", total: "1,984,500" },
+              { id: "1", client: "ASDASD.", item: "DSADASD", date: "2025/01/22", status: "已處理", total: "2,572,500" },
+              { id: "2", client: "DASDASD", item: "ADASDASD", date: "2025/01/23", status: "未處理", total: "1,984,500" },
             ].map((order, idx) => (
               <tr key={idx}>
                 <td className="font-monospace text-aurora">{order.id}</td>

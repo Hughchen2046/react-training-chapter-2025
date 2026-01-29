@@ -1,27 +1,73 @@
-import { useLocation, useParams } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useLocation, useParams, useOutletContext } from "react-router-dom";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { Loading } from "../../plugins/Loading";
+import { SquarePlus, SquareMinus } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const API_PATH = import.meta.env.VITE_API_PATH;
 
 const SingleProduct = () => {
-  const location = useLocation();
-  const { id } = useParams();
-  const [product, setProduct] = useState(location.state?.productData?.product || null);
-  const [loading, setLoading] = useState(!product);
-  const [error, setError] = useState(null);
+  const location = useLocation(); // 獲取location狀態
+  const { id } = useParams(); // 獲取url中的id
+  const [product, setProduct] = useState(location.state?.productData?.product || null); //繼承location狀態取得資料
+  const [loading, setLoading] = useState(!product); // 讀取loading狀態
+  const [error, setError] = useState(null); // 讀取error狀態
+  const [qty, setQty] = useState(1); // 購物車數量
+  const [success, setSuccess] = useState(null); // 購物車成功加入
+  const [cartQty, setCartQty] = useState(0); // 購物車中已有的數量
+  const [cartItemId, setCartItemId] = useState(null); // 購物車項目 ID
+  
+  //  refreshCart nav購物車數量更新 + OutletContext資料
+  const outletContext = useOutletContext();
+  const refreshCart = outletContext?.refreshCart;
+
+  // 獲取購物車中此商品的數量
+  const getCartQty = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const response = await axios.get(`${API_BASE}/api/${API_PATH}/cart`);
+      
+      const cartItem = response.data.data.carts.find(item => item.product.id === id);
+      
+      if (cartItem) {
+        setCartQty(cartItem.qty);
+        setCartItemId(cartItem.id);
+      } else {
+        setCartQty(0);
+        setCartItemId(null);
+      }
+    } catch (error) {
+      console.error("獲取購物車失敗:", error);
+      setCartQty(0);
+      setCartItemId(null);
+    }
+  }, [id]);
+
+  // 獲取購物車數量：初始載入、id 改變、success 改變時
+  useEffect(() => {
+    if (id) {
+      getCartQty();
+    }
+  }, [id, success, getCartQty]); // 依賴 id, success 和 getCartQty
 
   useEffect(() => {
-    // 如果已經有產品資料（從 state 傳遞），就不需要再次獲取
-    if (product) {
+    // 如果有 location.state 的產品資料，優先使用
+    if (location.state?.productData?.product && !product) {
+      setProduct(location.state.productData.product);
       setLoading(false);
       return;
     }
 
-    // 從 API 獲取產品資料
-    const fetchProduct = async () => {
+    // 如果已經有產品資料且 ID 相同，不需要重新獲取
+    if (product && product.id === id) {
+      setLoading(false);
+      return;
+    }
+
+    // 獲取產品資料
+    const getProduct = async () => {
       try {
         setLoading(true);
         const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
@@ -37,44 +83,76 @@ const SingleProduct = () => {
     };
 
     if (id) {
-      fetchProduct();
+      getProduct();
     }
-  }, [id, product]);
+  }, [id]); // id 改變時重新獲取
 
-  if (loading) {
-    return (
-      <div className="container mt-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-        <Loading />
-        <h4 className="text-secondary mt-5 fw-semibold">載入產品資料中,請稍待片刻...</h4>
-      </div>
-    );
+  // 購物車按鈕
+  const addQty = () => {
+    const maxAvailable = product.num - cartQty; // 剩餘可購買數量
+    if (qty < maxAvailable) {
+      setQty(qty + 1);
+    }
   }
 
-  if (error) {
-    return (
-      <div className="container mt-5 text-center">
-        <div className="glass-card p-5">
-          <h3 className="text-danger mb-3">⚠️ 載入失敗</h3>
-          <p className="text-secondary">{error}</p>
-          <a href="/product" className="btn btn-aurora mt-3">返回產品列表</a>
-        </div>
-      </div>
-    );
+  const subQty = () => {
+    if (qty > 1) {
+      setQty(qty - 1);
+    }
+  }
+  
+  const handleQty = (e) => {
+    const value = parseInt(e.target.value);
+    const maxAvailable = product.num - cartQty; // 剩餘可購買數量
+    if (!isNaN(value) && value >= 1 && value <= maxAvailable) {
+      setQty(value);
+    }
+  }
+  const submitToCart = async () => {
+    try {
+      // 檢查購物車中已有的數量 + 當前要購買的數量是否超過庫存
+      const totalQty = cartQty + qty;
+      
+      if (totalQty > product.num) {
+        return;
+      }
+      
+      // 如果已在購物車中，使用 PUT；否則使用 POST
+      if (cartItemId) {
+        // 更新現有的購物車項目
+        await axios.put(`${API_BASE}/api/${API_PATH}/cart/${cartItemId}`, {
+          data: {
+            product_id: id,
+            qty: totalQty
+          }
+        });
+      } else {
+        // 新增購物車項目
+        await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
+          data: {
+            product_id: id,
+            qty: qty
+          }
+        });
+      }
+      
+      // 成功送出後更新購物車數量
+      if (refreshCart) {
+        await refreshCart();
+      }
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(null);
+      }, 2000);
+      setQty(1); // 重置數量
+
+    } catch (error) {
+      console.error("加入購物車失敗:", error);
+      alert("加入購物車失敗，請稍後再試");
+    }
   }
 
-  if (!product) {
-    return (
-      <div className="container mt-5 text-center">
-        <div className="glass-card p-5">
-          <h3 className="mb-3">沒有可用的產品資料</h3>
-          <p className="text-secondary">找不到您要查看的產品。</p>
-          <a href="/product" className="btn btn-aurora mt-3">返回產品列表</a>
-        </div>
-      </div>
-    );
-  }
-
-  // 多種預設拼貼佈局模式
+  // 多種預設拼貼佈局模式 - 必須在所有條件返回之前定義
   const layoutPatterns = [
     // 模式 1: 左大右小
     [
@@ -130,7 +208,40 @@ const SingleProduct = () => {
   const selectedLayout = useMemo(() => {
     const randomIndex = Math.floor(Math.random() * layoutPatterns.length);
     return layoutPatterns[randomIndex];
-  }, [product.id]); // 當產品 ID 改變時重新選擇佈局
+  }, [product?.id]); // 避免 product 為 null 時出錯
+
+  if (loading) {
+    return (
+      <div className="container mt-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+        <Loading />
+        <h4 className="text-secondary mt-5 fw-semibold">載入產品資料中,請稍待片刻...</h4>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-5 text-center">
+        <div className="glass-card p-5">
+          <h3 className="text-danger mb-3">載入失敗</h3>
+          <p className="text-secondary">{error}</p>
+          <a href="/product" className="btn btn-aurora mt-3">返回產品列表</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container mt-5 text-center">
+        <div className="glass-card p-5">
+          <h3 className="mb-3">沒有可用的產品資料</h3>
+          <p className="text-secondary">找不到您要查看的產品。</p>
+          <a href="/product" className="btn btn-aurora mt-3">返回產品列表</a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mt-4">
@@ -149,23 +260,78 @@ const SingleProduct = () => {
             <p className="text-aurora mb-3 text-gradient">
               {product.description}
             </p>
-            <div className="mb-2">
+            <div className="mb-2 text-start">
               <span className="text-white">分類:</span> 
               <strong className="ms-2 text-aurora">{product.category}</strong>
             </div>
-            <div className="mb-2">
+            <div className="mb-2 text-start">
               <span className="text-white">單位:</span> 
               <strong className="ms-2 text-aurora">{product.unit}</strong>
             </div>
-            <div className="mb-2">
+            {product.starRating && (
+              <div className="mb-2 text-start">
+              <span className="card-text">
+                期待星級:
+                <span className="text-warning ms-2">
+                  {"★".repeat(product.starRating)}
+                </span>
+                <span className="text-secondary">
+                  {"☆".repeat(5 - product.starRating)}
+                </span>
+              </span> </div>
+            )}
+            <div className="mb-2 text-start">
               <span className="text-white">原價:</span> 
               <span className="ms-2 text-secondary text-decoration-line-through">{product.origin_price} 元</span>
             </div>
-            <div className="mb-4">
+            <div className="mb-4 text-start">
               <strong className="text-aurora">現價:</strong> 
-              <span className="ms-2 fs-4 fw-bold text-gradient">{product.price} 元</span>
+              <span className="ms-4 fs-4 fw-bold text-gradient">{product.price} 元</span>
             </div>
-            <button className="btn btn-aurora w-100 py-3">立即購買</button>
+            
+            {/* 庫存資訊 */}
+            <div className="mb-3 text-start">
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-white">庫存數量:</span>
+                <strong className="text-aurora">{product.num}</strong>
+              </div>
+
+              {cartQty > 0 && (
+                <div className="d-flex justify-content-between align-items-center mt-2">
+                  <span className="text-primary small">購物車中已有:</span>
+                  <span className="text-warning">{cartQty}</span>
+                </div>
+              )}
+              {cartQty > 0 && (
+                <div className="d-flex justify-content-between align-items-center mt-1">
+                  <span className="text-success small">可再購買:</span>
+                  <strong className="text-success">{Math.max(0, product.num - cartQty)}</strong>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4 d-flex justify-content-between">
+              <button type="button" className="btn btn-aurora-calulate" onClick={subQty}><SquareMinus /></button>
+              <input 
+                type="number" 
+                min={1} 
+                max={Math.max(1, product.num - cartQty)} 
+                step={1} 
+                className="form-control text-center" 
+                value={qty} 
+                onChange={handleQty}
+              />
+              <button type="button" className="btn btn-aurora-calulate" onClick={addQty}><SquarePlus /></button>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="btn btn-aurora w-100 py-3" 
+              onClick={submitToCart}
+              disabled={cartQty >= product.num}
+            >
+              {cartQty >= product.num ? '已達庫存上限' : '立即購買'}
+            </button>
           </div>
         </div>
         
@@ -187,6 +353,14 @@ const SingleProduct = () => {
           </div>
         </div>
       </div>
+
+      {success && (
+         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-sm">
+            成功加入購物車
+          </div>
+        </div>
+      )}
 
     </div>
   );

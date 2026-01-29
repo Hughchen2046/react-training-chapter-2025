@@ -13,7 +13,7 @@ const Product = () => {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
       navigate(`/product/${id}`, { state: { productData: res.data } });
-      console.log(res.data.product);
+      // console.log(res.data.product);
     } catch (error) {
       console.error("取得產品資料失敗", error);
     }
@@ -23,7 +23,7 @@ const Product = () => {
     const getProduct = async () => {
       try {
         const res = await axios.get(`${API_BASE}/api/${API_PATH}/products`);
-        console.log(res.data.products);
+        // console.log(res.data.products);
         setProducts(res.data.products);
       } catch (error) {
         console.error("取得產品資料失敗", error);
@@ -36,8 +36,8 @@ const Product = () => {
   return (
     <div className="container mt-5">
       <div className="text-center mb-5">
-        <h1 className="display-3 fw-black text-gradient mb-3">尊爵收藏</h1>
-        <p className="text-secondary fs-5">Experience the pinnacle of automotive engineering.</p>
+        <h1 className="display-3 fw-bold fw-black text-gradient mb-3">尊爵收藏</h1>
+        <p className="text-secondary fs-5">頂級品味，極速領域的典藏之作。</p>
       </div>
 
       <div className="row g-4">
@@ -52,7 +52,7 @@ const Product = () => {
                   style={{ transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
                 />
               </div>
-              <div className="flex-grow-1">
+              <div className="flex-grow-1 d-flex flex-column">
                 <div className="d-flex justify-content-between align-items-start mb-2">
                   <h3 className="h4 mb-0">{product.title}</h3>
                   <span className="badge bg-warning bg-opacity-70 text-aurora border border-white border-opacity-10">{product.is_enabled ? "在庫" : "缺貨"}</span>
@@ -60,18 +60,27 @@ const Product = () => {
                 <p className="text-info text-start small mb-4 line-clamp-2">
                   {product.description}
                 </p>
-                <div className="d-flex justify-content-between align-items-center mt-auto">
-                  <div>
-                    <span className="text-info text-start small d-block">預估售價</span>
-                    <span className="fs-4 fw-bold text-gradient">${product.origin_price.toLocaleString()}</span>
-                  </div>
-                  <button
-                    className="btn btn-aurora"
-                    onClick={() => handleViewMore(product.id)}
-                  >
-                    DISCOVER
-                  </button>
+                <div className="text-start mb-4 mt-auto">
+                                              {product.starRating && (
+                              <p className="card-text">
+                                期待星級:
+                                <span className="text-warning ms-2">
+                                  {"★".repeat(product.starRating)}
+                                </span>
+                                <span className="text-secondary">
+                                  {"☆".repeat(5 - product.starRating)}
+                                </span>
+                              </p>
+                            )}
+                  <span className="text-info small d-block">預估售價</span>
+                  <span className="fs-4 fw-bold text-gradient">${product.origin_price.toLocaleString()}</span>
                 </div>
+                <button
+                  className="btn btn-aurora w-auto"
+                  onClick={() => handleViewMore(product.id)}
+                >
+                  DISCOVER
+                </button>
               </div>
             </div>
           </div>

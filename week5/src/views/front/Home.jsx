@@ -45,7 +45,7 @@ const Home = () => {
                 探索車款
               </Link>
               <Link to="/login" className="btn btn-aurora-outline btn-lg px-5 py-3">
-                會員專區
+                貴賓專區
               </Link>
             </div>
           </div>

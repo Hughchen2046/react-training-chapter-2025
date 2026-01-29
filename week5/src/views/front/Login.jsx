@@ -35,8 +35,8 @@ const Login = () => {
       <div className="row justify-content-center">
         <div className="col-12 col-md-6 col-lg-4">
           <div className="glass-card text-center">
-            <h1 className="h2 fw-bold text-gradient mb-4">MEMBER ACCESS</h1>
-            <p className="text-secondary small mb-5">Enter your credentials to manage your collection.</p>
+            <h1 className="h2 fw-bold text-gradient mb-4">貴賓登入</h1>
+            <p className="text-secondary small mb-5">請輸入您的登入資訊</p>
             
             <form id="form" onSubmit={handleSubmit(onSubmit)}>
               <div className="mb-4 text-start">
@@ -46,10 +46,10 @@ const Login = () => {
                   className={`glass-input ${errors.username ? "border-danger" : ""}`}
                   placeholder="name@auramotors.com"
                   {...register("username", {
-                    required: "Email is required",
+                    required: "請輸入 Email",
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: "Invalid email format",
+                      message: "Email 格式錯誤",
                     },
                   })}
                 />
@@ -59,16 +59,16 @@ const Login = () => {
               </div>
 
               <div className="mb-5 text-start">
-                <label className="text-secondary small fw-semibold mb-2 ms-2">PASSPHRASE</label>
+                <label className="text-secondary small fw-semibold mb-2 ms-2">PASSWORD</label>
                 <input
                   type="password"
                   className={`glass-input ${errors.password ? "border-danger" : ""}`}
                   placeholder="••••••••"
                   {...register("password", {
-                    required: "Password is required",
+                    required: "請輸入密碼",
                     minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters",
+                      value: 8,
+                      message: "密碼至少 8 個字元",
                     },
                   })}
                 />
@@ -81,15 +81,14 @@ const Login = () => {
                 className="btn btn-aurora w-100 py-3 mb-4"
                 type="submit"
               >
-                AUTHORIZE
+                登入
               </button>
 
               <div className="d-flex justify-content-between align-items-center">
-                <span className="text-secondary small">Unauthorized access is strictly monitored.</span>
+                <span className="text-secondary small">無法登入？ 請聯繫客服</span>
               </div>
             </form>
           </div>
-          <p className="mt-5 text-center text-secondary opacity-50 small">&copy; 2025 AURA MOTORS - VELOCITY REDEFINED</p>
         </div>
       </div>
     </div>
