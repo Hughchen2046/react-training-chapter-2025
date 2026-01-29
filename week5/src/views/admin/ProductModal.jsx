@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import * as bootstrap from "bootstrap";
 
 export default function ProductModal({
   mode,
