@@ -1,268 +1,333 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import ProductModal from "../../component/ProductModal";
-import Pagination from "../../component/Pagination";
-import { useDispatch } from "react-redux";
-import { createAsyncMessage } from "../../slice/messageReducer";
-import * as bootstrap from "bootstrap";
-import axios from "axios";
-import "../../assets/style.css";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loading } from '../../plugins/Loading';
+import ProductModal from './ProductModal';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const API_PATH = import.meta.env.VITE_API_PATH;
-
-function Product() {
+const AdminProduct = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  const productModalRef = useRef(null);
-  const [modalType, setModalType] = useState("");
   const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState({});
-  const [templateData, setTemplateData] = useState({
-    id: "",
-    imageUrl: "",
-    title: "",
-    category: "",
-    unit: "",
-    originPrice: "",
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState(null); //分頁資訊
+  const [currentPage, setCurrentPage] = useState(1); //目前頁面
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('');
+  const [modalProduct, setModalProduct] = useState(null);
+
+  const MySwal = withReactContent(Swal);
+
+  // 預設產品資料格式
+  const dataFormat = {
+    title: '',
+    category: '',
+    origin_price: 0,
     price: 0,
-    description: "",
-    content: "",
-    isEnabled: false,
+    unit: '',
+    description: '',
+    content: '',
+    is_enabled: 1,
+    imageUrl: '',
     imagesUrl: [],
-  });
-
-  useEffect(() => {}, [templateData]);
-
-  const openModal = (product, type) => {
-    setTemplateData({
-      id: product.id || "",
-      imageUrl: product.imageUrl || "",
-      title: product.title || "",
-      category: product.category || "",
-      unit: product.unit || "",
-      originPrice: product.originPrice || "",
-      price: Number(product.price) || 0,
-      description: product.description || "",
-      content: product.content || "",
-      isEnabled: product.isEnabled || false,
-      imagesUrl: product.imagesUrl || [],
-    });
-    productModalRef.current.show();
-    setModalType(type);
-  };
-
-  const closeModal = () => {
-    productModalRef.current.hide();
-  };
-
-  const handleInputChange = (e) => {
-    const { id, value, type, checked } = e.target;
-    setTemplateData((prevData) => ({
-      ...prevData,
-      [id]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleImageChange = (index, value) => {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl];
-      newImages[index] = value;
-
-      if (
-        value !== "" &&
-        index === newImages.length - 1 &&
-        newImages.length < 5
-      ) {
-        newImages.push("");
-      }
-
-      if (newImages.length > 1 && newImages[newImages.length - 1] === "") {
-        newImages.pop();
-      }
-
-      return { ...prevData, imagesUrl: newImages };
-    });
-  };
-
-  const handleAddImage = () => {
-    setTemplateData((prevData) => ({
-      ...prevData,
-      imagesUrl: [...prevData.imagesUrl, ""],
-    }));
-  };
-
-  const handleRemoveImage = () => {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl];
-      newImages.pop();
-      return { ...prevData, imagesUrl: newImages };
-    });
-  };
-
-  const getProductData = useCallback(async (page = 1) => {
-    try {
-      const response = await axios.get(
-        `${API_BASE}/api/${API_PATH}/admin/products?page=${page}`
-      );
-      setProducts(response.data.products);
-      setPagination(response.data.pagination);
-    } catch (err) {
-      dispatch(createAsyncMessage(err.response.data));
-    }
-  }, [dispatch]);
-
-  const updateProductData = async (id) => {
-    const product = modalType === "edit" ? `product/${id}` : `product`;
-    const url = `${API_BASE}/api/${API_PATH}/admin/${product}`;
-
-    const productData = {
-      data: {
-        ...templateData,
-        origin_price: Number(templateData.originPrice),
-        price: Number(templateData.price),
-        is_enabled: templateData.isEnabled ? 1 : 0,
-        imagesUrl: templateData.imagesUrl,
-      },
-    };
-
-    try {
-      let response;
-
-      if (modalType === "edit") {
-        response = await axios.put(url, productData);
-        console.log("更新成功", response.data);
-        dispatch(createAsyncMessage(response.data));
-      } else {
-        response = await axios.post(url, productData);
-        console.log("新增成功", response.data);
-      }
-      closeModal();
-      getProductData();
-    } catch (err) {
-      if (modalType === "edit") {
-        console.error("更新失敗", err.response.data.message);
-      } else {
-        console.error("新增失敗", err.response.data.message);
-      }
-
-      dispatch(createAsyncMessage(err.response.data));
-    }
-  };
-
-  const delProductData = async (id) => {
-    try {
-      const response = await axios.delete(
-        `${API_BASE}/api/${API_PATH}/admin/product/${id}`
-      );
-      console.log("刪除成功", response.data);
-      dispatch(createAsyncMessage(response.data));
-      await productModalRef.current.hide();
-      getProductData();
-    } catch (err) {
-      dispatch(createAsyncMessage(err.response.data));
-    }
   };
 
   useEffect(() => {
-    const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
-      "$1"
-    );
-    axios.defaults.headers.common.Authorization = token;
-    productModalRef.current = new bootstrap.Modal("#productModal", {
-      keyboard: false,
-    });
+    const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
+    axios.defaults.headers.common.Authorization = `${token}`;
 
     const checkAdmin = async () => {
       try {
         await axios.post(`${API_BASE}/api/user/check`);
-        getProductData();
       } catch (err) {
-        navigate("/");
-        console.log(err.response.data.message);
+        navigate('/');
+        MySwal.fire({
+          icon: 'error',
+          title: '權限不足',
+          text: err.response.data.message,
+        });
       }
     };
     checkAdmin();
-  }, [getProductData, navigate]);
+  }, [navigate]);
 
+  const getProducts = async (page = 1) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/api/${API_PATH}/admin/products?page=${page}`);
+      // console.log(res.data);
+      setProducts(res.data);
+      setPagination(res.data.pagination); //分頁資訊
+      setCurrentPage(page); //目前頁面
+    } catch (err) {
+      console.error(err);
+      MySwal.fire({
+        icon: 'error',
+        title: '取得產品資料失敗',
+        text: err.response?.data?.message || '網路錯誤',
+      });
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
 
-  return (
+  const openModal = (product, mode) => {
+    setModalMode(mode);
+    setModalProduct(product ? { ...product, imagesUrl: product.imagesUrl || [] } : dataFormat);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // 處理輸入變更
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setModalProduct((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (checked ? 1 : 0) : value,
+    }));
+  };
+
+  // 處理圖片 URL 變更
+  const handleImageChange = (e, index) => {
+    const { value } = e.target;
+    setModalProduct((prev) => {
+      const newImagesUrl = [...prev.imagesUrl];
+      newImagesUrl[index] = value;
+      return { ...prev, imagesUrl: newImagesUrl };
+    });
+  };
+
+  // 新增圖片欄位
+  const handleAddImage = () => {
+    setModalProduct((prev) => ({
+      ...prev,
+      imagesUrl: [...prev.imagesUrl, ''],
+    }));
+  };
+
+  // 移除圖片欄位
+  const handleRemoveImage = () => {
+    setModalProduct((prev) => {
+      const restImages = [...(prev.imagesUrl || [])];
+      restImages.pop();
+      return { ...prev, imagesUrl: restImages };
+    });
+  };
+
+  // 檔案上傳
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file-to-upload', file);
+
+    try {
+      const res = await axios.post(`${API_BASE}/api/${API_PATH}/admin/upload`, formData);
+      const imageUrl = res.data.imageUrl;
+      setModalProduct((prev) => ({
+        ...prev,
+        imageUrl: imageUrl,
+      }));
+      MySwal.fire({
+        icon: 'success',
+        title: '上傳成功',
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    } catch (error) {
+      MySwal.fire({
+        icon: 'error',
+        title: '上傳失敗',
+        text: error.response?.data?.message || '網路錯誤',
+      });
+    }
+  };
+
+  // 更新或新增產品
+  const handleUpdateProduct = async () => {
+    let api = `${API_BASE}/api/${API_PATH}/admin/product`;
+    let method = 'post';
+
+    if (modalMode === 'edit') {
+      api = `${API_BASE}/api/${API_PATH}/admin/product/${modalProduct.id}`;
+      method = 'put';
+    }
+
+    const payload = {
+      data: {
+        ...modalProduct,
+        origin_price: Number(modalProduct.origin_price),
+        price: Number(modalProduct.price),
+        starRating: Number(modalProduct.starRating || 5),
+      },
+    };
+
+    try {
+      setLoading(true);
+      const res = await axios[method](api, payload);
+      MySwal.fire({
+        icon: 'success',
+        title: modalMode === 'edit' ? '更新成功' : '新增成功',
+        text: res.data.message,
+      });
+      closeModal();
+      getProducts(currentPage);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      MySwal.fire({
+        icon: 'error',
+        title: modalMode === 'edit' ? '更新失敗' : '新增失敗',
+        text: err.response?.data?.message || '編輯失敗',
+      });
+      setLoading(false);
+    }
+  };
+
+  // 刪除產品
+  const handleDeleteProduct = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.delete(
+        `${API_BASE}/api/${API_PATH}/admin/product/${modalProduct.id}`
+      );
+      MySwal.fire({
+        icon: 'success',
+        title: '刪除成功',
+        text: res.data.message,
+      });
+      closeModal();
+      getProducts(currentPage);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      MySwal.fire({
+        icon: 'error',
+        title: '刪除失敗',
+        text: err.response?.data?.message || '刪除失敗',
+      });
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getProducts(currentPage);
+  }, []);
+
+  return loading ? (
+    <div>
+      <Loading />
+    </div>
+  ) : (
     <>
-      <div className="container">
-        <div className="text-end mt-4">
-          <button
-            type="button"
-            className="btn btn-primary mt-5"
-            onClick={() => openModal("", "new")}
-          >
-            建立新的產品
+      <div className="container-fluid p-0">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h2 className="fw-black text-gradient">車款管理</h2>
+          <button className="btn btn-aurora" onClick={() => openModal(null, 'create')}>
+            + 新增車款
           </button>
         </div>
-        <table className="table mt-4">
-          <thead>
-            <tr>
-              <th width="120">分類</th>
-              <th>產品名稱</th>
-              <th width="120">原價</th>
-              <th width="120">售價</th>
-              <th width="100">是否啟用</th>
-              <th width="120">編輯</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>{product.category}</td>
-                <td>{product.title}</td>
-                <td className="text-end">{product.origin_price}</td>
-                <td className="text-end">{product.price}</td>
-                <td>
-                  {product.is_enabled ? (
-                    <span className="text-success">啟用</span>
-                  ) : (
-                    <span>未啟用</span>
-                  )}
-                </td>
-                <td>
-                  <div className="btn-group">
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => openModal(product, "edit")}
-                    >
-                      編輯
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-danger btn-sm"
-                      onClick={() => openModal(product, "delete")}
-                    >
-                      刪除
-                    </button>
-                  </div>
-                </td>
+
+        <div className="glass-table-container">
+          <table className="glass-table">
+            <thead>
+              <tr>
+                <th className="text-center">車款名稱</th>
+                <th className="text-center">車款類別</th>
+                <th className="text-center">原價</th>
+                <th className="text-center">價格</th>
+                <th className="text-center">狀態</th>
+                <th className="text-center">操作</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <Pagination pagination={pagination} changePage={getProductData} />
+            </thead>
+            <tbody>
+              {(products.products || []).map((product) => (
+                <tr key={product.id}>
+                  <td className="fw-bold text-white">{product.title}</td>
+                  <td>{product.category}</td>
+                  <td>
+                    <span className="text-aurora fw-bold">${product.origin_price}</span>
+                  </td>
+                  <td>
+                    <span className="text-aurora fw-bold">${product.price}</span>
+                  </td>
+                  <td className="text-center">
+                    <span
+                      className={`badge ${product.is_enabled === 0 ? 'text-secondary border-secondary' : 'text-success border-success'} bg-opacity-10 text-opacity-100 border border-current`}
+                    >
+                      {product.is_enabled === 0 ? '未上架' : '已上架'}
+                    </span>
+                  </td>
+                  <td className="text-end">
+                    <div className="d-flex justify-content-end gap-2">
+                      <button
+                        className="btn btn-sm btn-aurora-outline border-opacity-10"
+                        onClick={() => openModal(product, 'edit')}
+                      >
+                        編輯
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger border-opacity-10"
+                        onClick={() => openModal(product, 'delete')}
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 分頁控制 */}
+        {pagination && (
+          <div className="mt-4 d-flex justify-content-between align-items-center px-2">
+            <span className="text-secondary small">
+              第 {pagination.current_page} 頁，共 {pagination.total_pages} 頁
+            </span>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm btn-aurora-outline"
+                onClick={() => getProducts(currentPage - 1)}
+                disabled={!pagination.has_pre} //分頁資訊有has_pre的設定
+              >
+                上一頁
+              </button>
+              <button
+                className="btn btn-sm btn-aurora-outline"
+                onClick={() => getProducts(currentPage + 1)}
+                disabled={!pagination.has_next} //分頁資訊有has_next的設定
+              >
+                下一頁
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <ProductModal
-        modalType={modalType}
-        templateData={templateData}
-        onCloseModal={closeModal}
+        mode={modalMode}
+        tempProduct={modalProduct}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onUpdateProduct={handleUpdateProduct}
+        onDeleteProduct={handleDeleteProduct}
         onInputChange={handleInputChange}
         onImageChange={handleImageChange}
         onAddImage={handleAddImage}
         onRemoveImage={handleRemoveImage}
-        onUpdateProduct={updateProductData}
-        onDeleteProduct={delProductData}
+        onFileUpload={handleFileUpload}
       />
     </>
   );
-}
+};
 
-export default Product;
+export default AdminProduct;

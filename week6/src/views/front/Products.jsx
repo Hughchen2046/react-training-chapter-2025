@@ -12,7 +12,7 @@ const Product = () => {
   const handleViewMore = async(id, num) => {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
-      // 因為單一產品 API 不回傳 num，所以從列表傳入
+      
       const productWithNum = { ...res.data.product, num };
       navigate(`/product/${id}`, { state: { productData: { ...res.data, product: productWithNum } } });
     } catch (error) {

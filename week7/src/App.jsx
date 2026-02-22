@@ -1,14 +1,14 @@
-import { RouterProvider } from "react-router-dom";
-import MessageToast from './component/MessageToast';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './routes/router';
+import store from './app/store.jsx';
+import { Provider } from 'react-redux';
 
-import { router } from "./router";
-function App() {
+const App = () => {
   return (
-    <>
-      <MessageToast />
+    <Provider store={store}>
       <RouterProvider router={router} />
-    </>
+    </Provider>
   );
-}
+};
 
 export default App;

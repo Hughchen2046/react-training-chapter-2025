@@ -1,23 +1,20 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { createMessage } from "../../slice/messageReducer";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const API_PATH = import.meta.env.VITE_API_PATH;
 
 const Product = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-
   const [products, setProducts] = useState([]);
 
-  const handleViewMore = async (id) => {
+  const handleViewMore = async(id, num) => {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/product/${id}`);
-      navigate(`/product/${id}`, { state: { productData: res.data } });
-      console.log(res.data);
+      
+      const productWithNum = { ...res.data.product, num };
+      navigate(`/product/${id}`, { state: { productData: { ...res.data, product: productWithNum } } });
     } catch (error) {
       console.error("取得產品資料失敗", error);
     }
@@ -29,38 +26,60 @@ const Product = () => {
         const res = await axios.get(`${API_BASE}/api/${API_PATH}/products`);
         setProducts(res.data.products);
       } catch (error) {
-        dispatch(createMessage(error.response.data));
         console.error("取得產品資料失敗", error);
       }
     };
+  
     getProduct();
-  }, [dispatch]);
+  }, []);
 
   return (
-    <div className="container mt-4">
-      <div className="row">
+    <div className="container mt-5">
+      <div className="text-center mb-5">
+        <h1 className="display-3 fw-bold fw-black text-gradient mb-3">尊爵收藏</h1>
+        <p className="text-secondary fs-5">頂級品味，極速領域的典藏之作。</p>
+      </div>
+
+      <div className="row g-4">
         {products.map((product) => (
-          <div className="col-md-4 mb-3" key={product.id}>
-            <div className="card">
-              <img
-                src={product.imageUrl}
-                className="card-img-top"
-                alt={product.title}
-              />
-              <div className="card-body">
-                <h5 className="card-title">{product.title}</h5>
-                <p className="card-text">{product.description}</p>
-                <p className="card-text">
-                  <strong>價格:</strong> {product.price} 元
+          <div className="col-lg-4 col-md-6" key={product.id}>
+            <div className="glass-card h-100 d-flex flex-column">
+              <div className="overflow-hidden round-24 mb-4 aspect-ratio-gold">
+                <img
+                  src={product.imageUrl}
+                  className="car-card-img transition-transform duration-500 hover-scale-110"
+                  alt={product.title}
+                  style={{ transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                />
+              </div>
+              <div className="flex-grow-1 d-flex flex-column">
+                <div className="d-flex justify-content-between align-items-start mb-2">
+                  <h3 className="h4 mb-0">{product.title}</h3>
+                  <span className="badge bg-warning bg-opacity-70 text-aurora border border-white border-opacity-10">{product.is_enabled ? "在庫" : "缺貨"}</span>
+                </div>
+                <p className="text-info text-start small mb-4 line-clamp-2">
+                  {product.description}
                 </p>
-                <p className="card-text">
-                  <small className="text-muted">單位: {product.unit}</small>
-                </p>
+                <div className="text-start mb-4 mt-auto">
+                                              {product.starRating && (
+                              <p className="card-text">
+                                期待星級:
+                                <span className="text-warning ms-2">
+                                  {"★".repeat(product.starRating)}
+                                </span>
+                                <span className="text-secondary">
+                                  {"☆".repeat(5 - product.starRating)}
+                                </span>
+                              </p>
+                            )}
+                  <span className="text-info small d-block">預估售價</span>
+                  <span className="fs-4 fw-bold text-gradient">${product.origin_price.toLocaleString()}</span>
+                </div>
                 <button
-                  className="btn btn-primary"
-                  onClick={() => handleViewMore(product.id)}
+                  className="btn btn-aurora w-auto"
+                  onClick={() => handleViewMore(product.id, product.num)}
                 >
-                  查看更多
+                  DISCOVER
                 </button>
               </div>
             </div>

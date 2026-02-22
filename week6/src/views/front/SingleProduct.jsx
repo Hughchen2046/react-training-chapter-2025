@@ -49,12 +49,12 @@ const SingleProduct = () => {
     }
   }, [id]);
 
-  // 獲取購物車數量：初始載入、id 改變、success 改變時
+  
   useEffect(() => {
     if (id) {
       getCartQty();
     }
-  }, [id, success, getCartQty]); // 依賴 id, success 和 getCartQty
+  }, [id, success, getCartQty]); 
 
   useEffect(() => {
     // 如果有 location.state 的產品資料，優先使用
