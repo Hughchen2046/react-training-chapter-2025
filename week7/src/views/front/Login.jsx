@@ -1,44 +1,35 @@
 import { useForm } from 'react-hook-form';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
 import { useDispatch, useSelector } from 'react-redux';
-import { login } from '../../features/auth/AuthSlice';
-
-const MySwal = withReactContent(Swal);
+import { loginThunk } from '../../features/auth/AuthThunk';
+// import { login } from '../../features/auth/AuthSlice';
 
 const Login = () => {
   const dispatch = useDispatch();
-  const { checking } = useSelector((state) => state.auth);
+  const { token } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  // const { success, error: notifyError } = useMessage();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
-
+  useEffect(() => {
+    if (token) navigate('/admin/products', { replace: true });
+  }, [token]);
   const onSubmit = async (data) => {
     try {
-      const result = await dispatch(login(data));
-      if (login.fulfilled.match(result)) {
-        navigate('/admin/products', { replace: true });
-      } else {
-        throw new Error(result.payload || '登入失敗');
-      }
-
-      MySwal.fire({
-        icon: 'success',
-        title: '登入成功',
-        showConfirmButton: false,
-        timer: 1500,
-      });
-
-    } catch (error) {
-      MySwal.fire({
-        icon: 'error',
-        title: '登入失敗',
-        text: error.message || '請稍後再試',
-      });
+      await dispatch(loginThunk(data));
+    } catch (err) {
+      console.log(err);
+      // if (login.fulfilled.match(result)) {
+      //   success('登入成功');
+      //   navigate('/admin/products', { replace: true });
+      // } else {
+      //   throw new Error(result.payload || '登入失敗');
+      // }
+      // notifyError('登入失敗', err.message || '請稍後再試');
     }
   };
 
@@ -89,7 +80,7 @@ const Login = () => {
                 )}
               </div>
 
-              <button className="btn btn-aurora w-100 py-3 mb-4" type="submit" disabled={checking}>
+              <button className="btn btn-aurora w-100 py-3 mb-4" type="submit">
                 登入
               </button>
 

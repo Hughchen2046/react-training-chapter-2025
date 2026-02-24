@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loading } from '../../plugins/Loading';
 import ProductModal from './ProductModal';
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
+// import useMessage from '../../features/message/useMessage';
 
 import axios from 'axios';
 
@@ -19,7 +18,7 @@ const AdminProduct = () => {
   const [modalMode, setModalMode] = useState('');
   const [modalProduct, setModalProduct] = useState(null);
 
-  const MySwal = withReactContent(Swal);
+  // const { success, error: notifyError } = useMessage();
 
   // 預設產品資料格式
   const dataFormat = {
@@ -35,24 +34,20 @@ const AdminProduct = () => {
     imagesUrl: [],
   };
 
-  useEffect(() => {
-    const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
-    axios.defaults.headers.common.Authorization = `${token}`;
+  // useEffect(() => {
+  //   const token = document.cookie.replace(/(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/, '$1');
+  //   axios.defaults.headers.common.Authorization = `${token}`;
 
-    const checkAdmin = async () => {
-      try {
-        await axios.post(`${API_BASE}/api/user/check`);
-      } catch (err) {
-        navigate('/');
-        MySwal.fire({
-          icon: 'error',
-          title: '權限不足',
-          text: err.response.data.message,
-        });
-      }
-    };
-    checkAdmin();
-  }, [navigate]);
+  //   const checkAdmin = async () => {
+  //     try {
+  //       await axios.post(`${API_BASE}/api/user/check`);
+  //     } catch (err) {
+  //       navigate('/');
+  //       // notifyError('權限不足', err.response.data.message);
+  //     }
+  //   };
+  //   checkAdmin();
+  // }, [navigate]);
 
   const getProducts = async (page = 1) => {
     try {
@@ -64,11 +59,7 @@ const AdminProduct = () => {
       setCurrentPage(page); //目前頁面
     } catch (err) {
       console.error(err);
-      MySwal.fire({
-        icon: 'error',
-        title: '取得產品資料失敗',
-        text: err.response?.data?.message || '網路錯誤',
-      });
+      notifyError('取得產品資料失敗', err.response?.data?.message || '網路錯誤');
     } finally {
       setTimeout(() => setLoading(false), 500);
     }
@@ -135,18 +126,9 @@ const AdminProduct = () => {
         ...prev,
         imageUrl: imageUrl,
       }));
-      MySwal.fire({
-        icon: 'success',
-        title: '上傳成功',
-        showConfirmButton: false,
-        timer: 1500,
-      });
-    } catch (error) {
-      MySwal.fire({
-        icon: 'error',
-        title: '上傳失敗',
-        text: error.response?.data?.message || '網路錯誤',
-      });
+      success('上傳成功');
+    } catch (err) {
+      notifyError('上傳失敗', err.response?.data?.message || '網路錯誤');
     }
   };
 
@@ -172,21 +154,16 @@ const AdminProduct = () => {
     try {
       setLoading(true);
       const res = await axios[method](api, payload);
-      MySwal.fire({
-        icon: 'success',
-        title: modalMode === 'edit' ? '更新成功' : '新增成功',
-        text: res.data.message,
-      });
+      success(modalMode === 'edit' ? '更新成功' : '新增成功', res.data.message);
       closeModal();
       getProducts(currentPage);
       setLoading(false);
     } catch (err) {
       console.error(err);
-      MySwal.fire({
-        icon: 'error',
-        title: modalMode === 'edit' ? '更新失敗' : '新增失敗',
-        text: err.response?.data?.message || '編輯失敗',
-      });
+      notifyError(
+        modalMode === 'edit' ? '更新失敗' : '新增失敗',
+        err.response?.data?.message || '編輯失敗'
+      );
       setLoading(false);
     }
   };
@@ -198,21 +175,13 @@ const AdminProduct = () => {
       const res = await axios.delete(
         `${API_BASE}/api/${API_PATH}/admin/product/${modalProduct.id}`
       );
-      MySwal.fire({
-        icon: 'success',
-        title: '刪除成功',
-        text: res.data.message,
-      });
+      success('刪除成功', res.data.message);
       closeModal();
       getProducts(currentPage);
       setLoading(false);
     } catch (err) {
       console.error(err);
-      MySwal.fire({
-        icon: 'error',
-        title: '刪除失敗',
-        text: err.response?.data?.message || '刪除失敗',
-      });
+      notifyError('刪除失敗', err.response?.data?.message || '刪除失敗');
       setLoading(false);
     }
   };

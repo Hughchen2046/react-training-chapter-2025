@@ -11,9 +11,9 @@ import FrontendLayout from '../layout/FrontendLayout';
 import AdminLayout from '../layout/AdminLayout';
 import AdminProducts from '../views/admin/AdminProducts';
 import AdminOrders from '../views/admin/AdminOrders';
-import ProtectedRoute from './ProtectedRoute';
+import { GuestRoute, ProtectedRoute } from './CheckRouter';
 
-import AuthRender from '../features/auth/Auth';
+// import AuthRender from '../features/auth/Auth';
 
 export const router = createHashRouter([
   {
@@ -38,11 +38,16 @@ export const router = createHashRouter([
       },
       {
         path: 'login',
-        element: <Login />,
+        element: (
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        ),
       },
     ],
   },
   {
+    // 加入ProtectRoute來避免進入admin
     path: '/admin',
     element: (
       <ProtectedRoute>
@@ -59,10 +64,6 @@ export const router = createHashRouter([
         element: <AdminOrders />,
       },
     ],
-  },
-  {
-    path: '/auth-test',
-    element: <AuthRender />,
   },
   {
     path: '*',
