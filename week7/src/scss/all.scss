@@ -1,5 +1,11 @@
-@import "bootstrap/scss/bootstrap";
+@import 'bootstrap/scss/bootstrap';
 
+@import './style';
+@import './custom';
 
-@import "./style";
-@import "./custom";
+.slab-rli-bounding-box .rli-text-format {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 0.9em !important;
+  letter-spacing: 1px;
+}
